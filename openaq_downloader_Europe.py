@@ -20,7 +20,7 @@ from tqdm import tqdm
 # KONFIGURACJA — zmień według potrzeb
 # ─────────────────────────────────────────────
 
-API_KEY = "X"   # ← wklej swój klucz!
+API_KEY = "ff97a634265ffa3f56a933b562283ab0858b7c953d436f9af36ef5e4a6c32ede"   # ← wklej swój klucz!
 
 # Kraje do pobrania (Cała Europa - kody ISO 2)
 COUNTRIES = {
@@ -34,16 +34,17 @@ COUNTRIES = {
     "ME": "Czarnogóra", "NL": "Holandia", "MK": "Macedonia Północna",
     "NO": "Norwegia", "PL": "Polska", "PT": "Portugalia", "RO": "Rumunia",
     "RS": "Serbia", "SK": "Słowacja", "SI": "Słowenia", "ES": "Hiszpania",
-    "SE": "Szwecja", "CH": "Szwajcaria", "GB": "Wielka Brytania", 
-    "UA": "Ukraina", "LT": "Litwa"
+    "SE": "Szwecja", "CH": "Szwajcaria", "GB": "Wielka Brytania",
+    "UA": "Ukraina",
 }
 
 # Parametry jakości powietrza (ID w OpenAQ v3)
+# POPRAWKA: NO₂=5 (µg/m³), O₃=3 (µg/m³) — poprzednie ID 7 i 10 to były wersje w ppm
 PARAMETERS = {
-    2:  "pm25",   # PM2.5 — najważniejszy wskaźnik zdrowotny
-    1:  "pm10",   # PM10
-    7:  "no2",    # NO₂
-    10: "o3",     # O₃
+    1: "pm10",
+    2: "pm25",
+    5: "no2",   # ← POPRAWIONE (było: 7)
+    3: "o3",    # ← POPRAWIONE (było: 10)
 }
 
 # Zakres dat (4 pełne lata)
@@ -55,7 +56,7 @@ DATE_TO   = "2025-12-31"
 MAX_STATIONS_PER_COUNTRY = 50
 
 # Folder zapisu
-OUTPUT_DIR = "openaq_data"
+OUTPUT_DIR = "openaq_data_v2"
 
 # ─────────────────────────────────────────────
 # USTAWIENIA API
@@ -175,19 +176,21 @@ def get_daily_measurements(sensor_id, date_from, date_to):
 
         meta = data.get("meta", {})
         found_raw = meta.get("found", 0)
-        
+
         # Bezpieczne parsowanie (API OpenAQ czasem zwraca np. ">10000" jako string)
         try:
             found = int(str(found_raw).replace(">", "").replace("<", "").replace("+", "").strip())
         except (ValueError, TypeError):
-            found = 9999999 # Bezpieczny zapas, jeśli API rzuci czymś zupełnie niespodziewanym
-            
+            found = 9999999  # Bezpieczny zapas, jeśli API rzuci czymś zupełnie niespodziewanym
+
         if page * 1000 >= found:
             break
         page += 1
         time.sleep(RATE_LIMIT_DELAY)
 
     return all_results
+
+
 # ─────────────────────────────────────────────
 # GŁÓWNA LOGIKA POBIERANIA
 # ─────────────────────────────────────────────
@@ -198,11 +201,11 @@ def main():
     print("  OpenAQ Data Downloader — CAŁA EUROPA")
     print(f"{'='*60}\n")
 
-    if API_KEY == "TUTAJ_WKLEJ_SWOJ_KLUCZ_API" or API_KEY == "TWÓJ_KLUCZ_API":
-        print(" Uzupełnij zmienną API_KEY przed uruchomieniem!")
+    if API_KEY == "TUTAJ_WKLEJ_SWOJ_KLUCZ_API" or API_KEY == "TWÓJ_KLUCZ_API" or API_KEY == "X":
+        print("  Uzupełnij zmienną API_KEY przed uruchomieniem!")
         return
 
-    all_stations   = []
+    all_stations     = []
     all_measurements = []
 
     # ── KROK 1: Pobierz stacje dla każdego kraju ──────────────────
@@ -221,7 +224,7 @@ def main():
         time.sleep(RATE_LIMIT_DELAY)
 
     if not all_stations:
-        print("\n Nie pobrano żadnych stacji. Sprawdź klucz API.")
+        print("\n  Nie pobrano żadnych stacji. Sprawdź klucz API.")
         return
 
     # ── KROK 2: Pobierz pomiary dla każdej stacji ─────────────────
@@ -246,9 +249,9 @@ def main():
         }
 
         for sensor in station.get("sensors", []):
-            sensor_id    = sensor.get("id")
-            param_id     = sensor.get("parameter", {}).get("id")
-            param_name   = sensor.get("parameter", {}).get("name", "")
+            sensor_id  = sensor.get("id")
+            param_id   = sensor.get("parameter", {}).get("id")
+            param_name = sensor.get("parameter", {}).get("name", "")
 
             if param_id not in PARAMETERS:
                 continue
@@ -256,7 +259,7 @@ def main():
             measurements = get_daily_measurements(sensor_id, DATE_FROM, DATE_TO)
 
             for m in measurements:
-                period = m.get("period", {})
+                period  = m.get("period", {})
                 dt_from = period.get("datetimeFrom", {}).get("utc", "")
                 date    = dt_from[:10] if dt_from else ""
                 value   = m.get("value")
@@ -317,13 +320,15 @@ def main():
     df_profiles.columns.name = None
 
     param_cols = [c for c in df_profiles.columns if c in PARAMETERS.values()]
-    df_profiles = df_profiles.dropna(subset=param_cols, thresh=len(param_cols)//2 + 1)
+    df_profiles = df_profiles.dropna(subset=param_cols, thresh=len(param_cols) // 2 + 1)
 
     profiles_path = os.path.join(OUTPUT_DIR, "station_profiles.parquet")
     df_profiles.to_parquet(profiles_path, index=False)
     print(f"   station_profiles.parquet  ({len(df_profiles)} stacji z profilami)")
 
-    print("\n   Proces pobierania zakończony pomyślnie!\n")
+    print(f"\n   Parametry w danych:")
+    for p, cnt in df_meas["parameter"].value_counts().items():
+        print(f"      {p:<8}: {cnt:>10,}")
 
 if __name__ == "__main__":
     main()

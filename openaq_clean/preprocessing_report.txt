@@ -1,0 +1,75 @@
+============================================================
+  PREPROCESSING — OpenAQ Europa
+============================================================
+
+[1] Wczytano dane:
+    stations:        1,379 wierszy
+    measurements:  2,443,403 wierszy
+    profiles:          740 wierszy
+
+[2] Czyszczenie stacji...
+    Przed:         1379 stacji
+    Złe współrz.:  2 usuniętych
+    Po:            1377 stacji
+
+[3] Czyszczenie pomiarów...
+    Ujemne wartości usunięte:  0
+    Poza limitami fizycznymi:  0
+    Usuwanie outlierów (IQR×3.0)...
+    Przed:         2,443,403 rekordów
+    Po:            2,419,983 rekordów
+    Usunięto:      23,420 (1.0%)
+
+[4] Czyszczenie profili stacji...
+    Parametry w profilu:  ['pm25', 'pm10', 'no2', 'o3']
+    Uzupełniono pm25: 184 braków → mediana (10.18)
+    Uzupełniono pm10: 15 braków → mediana (17.81)
+    Uzupełniono no2: 15 braków → mediana (14.30)
+    Uzupełniono o3: 171 braków → mediana (51.40)
+    Przycięto pm25 do 37.38: 4 stacji
+    Przycięto pm10 do 48.43: 4 stacji
+    Przycięto no2 do 50.91: 4 stacji
+    Przycięto o3 do 89.96: 4 stacji
+    Przed:  740 profili
+    Po:     740 profili
+
+[5] Tworzenie agregatów miesięcznych...
+    Agregaty miesięczne:  6,569 wierszy
+
+[6] Zapisywanie plików...
+    stations_clean.parquet       (1,377 stacji)
+    measurements_clean.parquet   (2,419,983 rekordów)
+    station_profiles_clean.parquet (740 stacji)
+    monthly_aggregates.parquet   (6,569 wierszy)
+
+============================================================
+  PODSUMOWANIE
+============================================================
+
+Kraje w danych: 39
+Stacje:         1176
+Zakres dat:     2021-12-31 → 2025-12-31
+
+Liczba rekordów per parametr:
+    no2     :    729,623
+    o3      :    528,002
+    pm10    :    695,234
+    pm25    :    467,124
+
+Średnie wartości per parametr (mediana globalnie):
+    no2     : 12.40 µg/m³
+    o3      : 53.90 µg/m³
+    pm10    : 15.20 µg/m³
+    pm25    : 8.22 µg/m³
+
+Pokrycie krajów (top 10 wg liczby rekordów):
+    Węgry                         :  140,675
+    Serbia                        :  127,642
+    Portugalia                    :  123,957
+    Czechy                        :  120,924
+    Wielka Brytania               :  116,286
+    Szwajcaria                    :  110,455
+    Belgia                        :  106,772
+    Niemcy                        :  103,597
+    Włochy                        :  102,931
+    Słowacja                      :  102,187
