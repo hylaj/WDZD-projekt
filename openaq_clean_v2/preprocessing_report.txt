@@ -1,0 +1,98 @@
+============================================================
+  PREPROCESSING — OpenAQ Europa
+============================================================
+
+[1] Wczytano dane:
+    stations:        1,379 wierszy
+    measurements:  2,443,403 wierszy
+    profiles:          740 wierszy
+
+[2] Czyszczenie stacji...
+    Przed:         1,379 stacji
+    Złe współrz.:  2 usuniętych (poza Europą)
+    Po:            1,377 stacji
+
+[3] Czyszczenie pomiarów...
+    Poza zakresem dat (< 2022):  1,428 usuniętych
+    Ujemne wartości:           0 usuniętych
+    Poza limitami fizycznymi:  0 usuniętych
+    Usuwanie outlierów (IQR×3.0)...
+    Przed:         2,443,403 rekordów
+    Po:            2,418,568 rekordów
+    Usunięto:      24,835 (1.0%)
+
+[4] Profile stacji — wersja prosta (średnie globalne)...
+    Parametry w profilu:  ['pm25', 'pm10', 'no2', 'o3']
+    Uzupełniono pm25: 184 braków → mediana (10.18)
+    Uzupełniono pm10: 15 braków → mediana (17.81)
+    Uzupełniono no2: 15 braków → mediana (14.30)
+    Uzupełniono o3: 171 braków → mediana (51.40)
+    Przycięto pm25 do 37.38: 4 stacji
+    Przycięto pm10 do 48.43: 4 stacji
+    Przycięto no2 do 50.91: 4 stacji
+    Przycięto o3 do 89.96: 4 stacji
+    Profili: 740
+
+[5] Profile rozszerzone pod PCA/UMAP (16 cech)...
+    Stacji z pełnym profilem rozszerzonym: 982
+    Liczba cech: 16
+    Cechy: ['mean_no2', 'mean_o3', 'mean_pm10', 'mean_pm25', 'std_no2', 'std_o3', 'std_pm10', 'std_pm25', 'winter_no2', 'winter_o3', 'winter_pm10', 'winter_pm25', 'summer_no2', 'summer_o3', 'summer_pm10', 'summer_pm25']
+
+[6] Tworzenie agregatów miesięcznych...
+    Agregaty miesięczne: 6,467 wierszy
+
+[7] Zapisywanie plików PARQUET...
+    stations_clean.parquet              (1,377 stacji)
+    measurements_clean.parquet          (2,418,568 rekordów)
+    station_profiles_clean.parquet      (740 stacji)
+    station_profiles_extended.parquet   (982 stacji, 16 cech)
+    monthly_aggregates.parquet          (6,467 wierszy)
+
+[8] Eksport CSV dla Tableau...
+    stations_clean.csv              → Osoba A: mapa stacji
+    station_profiles_extended.csv   → Osoba A: PCA/UMAP scatter plot
+    measurements_daily.csv          → Osoba B: trendy, epizody
+    monthly_aggregates.csv          → Osoba B: sezonowość, heatmapy
+
+============================================================
+  PODSUMOWANIE
+============================================================
+
+Kraje:       39
+Stacje:      1176
+Zakres dat:  2022-01-01 → 2025-12-31
+
+Rekordy per parametr:
+    no2     :    729,177   (norma WHO: 25.0 µg/m³)
+    pm10    :    694,832   (norma WHO: 45.0 µg/m³)
+    o3      :    527,678   (norma WHO: 100.0 µg/m³)
+    pm25    :    466,881   (norma WHO: 15.0 µg/m³)
+
+Mediany globalne:
+    no2     : 12.40 µg/m³
+    o3      : 54.00 µg/m³
+    pm10    : 15.20 µg/m³
+    pm25    : 8.22 µg/m³
+
+Top 10 krajów (liczba rekordów):
+    Węgry                         :  140,617
+    Serbia                        :  127,608
+    Portugalia                    :  123,957
+    Czechy                        :  120,815
+    Wielka Brytania               :  116,286
+    Szwajcaria                    :  110,389
+    Belgia                        :  106,669
+    Niemcy                        :  103,535
+    Włochy                        :  102,931
+    Słowacja                      :  102,087
+
+Pliki w openaq_clean_v2/:
+    measurements_clean.parquet                      7088 KB
+    measurements_daily.csv                        304845 KB
+    monthly_aggregates.csv                           582 KB
+    monthly_aggregates.parquet                       197 KB
+    station_profiles_clean.parquet                    66 KB
+    station_profiles_extended.csv                    356 KB
+    station_profiles_extended.parquet                174 KB
+    stations_clean.csv                               108 KB
+    stations_clean.parquet                            66 KB
