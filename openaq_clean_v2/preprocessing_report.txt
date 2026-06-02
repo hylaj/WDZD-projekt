@@ -90,7 +90,12 @@ Pliki w openaq_clean_v2/:
     measurements_clean.parquet                      7088 KB
     measurements_daily.csv                        304845 KB
     monthly_aggregates.csv                           582 KB
-    monthly_aggregates.parquet                       197 KB
+    monthly_aggregates.parquet                       198 KB
+    pca_loadings.csv                                   1 KB
+    pca_umap_results.csv                             326 KB
+    pca_umap_results.parquet                         158 KB
+    pca_variance.csv                                   0 KB
+    preprocessing_report.txt                           3 KB
     station_profiles_clean.parquet                    66 KB
     station_profiles_extended.csv                    356 KB
     station_profiles_extended.parquet                174 KB

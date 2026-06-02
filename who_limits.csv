@@ -1,0 +1,5 @@
+parameter,who_limit
+pm25,15.0
+pm10,45.0
+no2,25.0
+o3,100.0
