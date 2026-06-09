@@ -1,6 +1,4 @@
 """
-OpenAQ Data Downloader - Projekt: Globalna jakość powietrza (CAŁA EUROPA)
-==========================================================================
 Skrypt pobiera dane z OpenAQ API v3 dla krajów Europy i zapisuje
 gotowe pliki PARQUET do analizy (mapa stacji, szeregi czasowe, PCA/UMAP).
 
@@ -17,10 +15,10 @@ import os
 from tqdm import tqdm
 
 # ─────────────────────────────────────────────
-# KONFIGURACJA — zmień według potrzeb
+# KONFIGURACJA 
 # ─────────────────────────────────────────────
 
-API_KEY = "ff97a634265ffa3f56a933b562283ab0858b7c953d436f9af36ef5e4a6c32ede"   # ← wklej swój klucz!
+API_KEY = "ff97a634265ffa3f56a933b562283ab0858b7c953d436f9af36ef5e4a6c32ede"  
 
 # Kraje do pobrania (Cała Europa - kody ISO 2)
 COUNTRIES = {
@@ -39,12 +37,11 @@ COUNTRIES = {
 }
 
 # Parametry jakości powietrza (ID w OpenAQ v3)
-# POPRAWKA: NO₂=5 (µg/m³), O₃=3 (µg/m³) — poprzednie ID 7 i 10 to były wersje w ppm
 PARAMETERS = {
     1: "pm10",
     2: "pm25",
-    5: "no2",   # ← POPRAWIONE (było: 7)
-    3: "o3",    # ← POPRAWIONE (było: 10)
+    5: "no2",   
+    3: "o3",    
 }
 
 # Zakres dat (4 pełne lata)
@@ -52,7 +49,7 @@ DATE_FROM = "2022-01-01"
 DATE_TO   = "2025-12-31"
 
 # Ze względu na całą Europę, limit ustawiamy na 50 oficjalnych stacji per kraj
-# (to i tak da nam ponad 2000 stacji do analizy)
+# (to daje ponad 2000 stacji do analizy)
 MAX_STATIONS_PER_COUNTRY = 50
 
 # Folder zapisu
@@ -80,7 +77,7 @@ def api_get(endpoint, params=None):
     try:
         resp = requests.get(url, headers=HEADERS, params=params, timeout=30)
         if resp.status_code == 429:
-            print("  ⚠️  Limit zapytań — czekam 60 sekund...")
+            print("Limit zapytań — czekam 60 sekund...")
             time.sleep(60)
             resp = requests.get(url, headers=HEADERS, params=params, timeout=30)
         resp.raise_for_status()
@@ -177,11 +174,10 @@ def get_daily_measurements(sensor_id, date_from, date_to):
         meta = data.get("meta", {})
         found_raw = meta.get("found", 0)
 
-        # Bezpieczne parsowanie (API OpenAQ czasem zwraca np. ">10000" jako string)
         try:
             found = int(str(found_raw).replace(">", "").replace("<", "").replace("+", "").strip())
         except (ValueError, TypeError):
-            found = 9999999  # Bezpieczny zapas, jeśli API rzuci czymś zupełnie niespodziewanym
+            found = 9999999  
 
         if page * 1000 >= found:
             break
@@ -208,7 +204,6 @@ def main():
     all_stations     = []
     all_measurements = []
 
-    # ── KROK 1: Pobierz stacje dla każdego kraju ──────────────────
     print(" KROK 1: Pobieranie stacji pomiarowych...")
     print("-" * 40)
 
@@ -227,7 +222,6 @@ def main():
         print("\n  Nie pobrano żadnych stacji. Sprawdź klucz API.")
         return
 
-    # ── KROK 2: Pobierz pomiary dla każdej stacji ─────────────────
     print(f"\n\n KROK 2: Pobieranie pomiarów ({DATE_FROM} → {DATE_TO})")
     print("-" * 40)
     print(f"  Łącznie stacji: {len(all_stations)}\n")
@@ -285,8 +279,7 @@ def main():
 
         station_rows.append(station_row)
 
-    # ── KROK 3: Zapis plików (PARQUET) ────────────────────────────
-    print("\n\n💾 KROK 3: Zapisywanie plików (.parquet)...")
+    print("\n\n KROK 3: Zapisywanie plików (.parquet)...")
     print("-" * 40)
 
     df_stations = pd.DataFrame(station_rows)
