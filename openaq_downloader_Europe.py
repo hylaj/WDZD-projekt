@@ -1,26 +1,11 @@
-"""
-Skrypt pobiera dane z OpenAQ API v3 dla krajów Europy i zapisuje
-gotowe pliki PARQUET do analizy (mapa stacji, szeregi czasowe, PCA/UMAP).
-
-PRZED URUCHOMIENIEM:
-1. Zarejestruj się na https://explore.openaq.org i pobierz klucz API
-2. Wklej klucz w zmienną API_KEY poniżej
-3. Zainstaluj zależności: pip install requests pandas tqdm pyarrow
-"""
-
 import requests
 import pandas as pd
 import time
 import os
 from tqdm import tqdm
 
-# ─────────────────────────────────────────────
-# KONFIGURACJA 
-# ─────────────────────────────────────────────
+API_KEY = "X"
 
-API_KEY = "ff97a634265ffa3f56a933b562283ab0858b7c953d436f9af36ef5e4a6c32ede"  
-
-# Kraje do pobrania (Cała Europa - kody ISO 2)
 COUNTRIES = {
     "AL": "Albania", "AD": "Andora", "AT": "Austria", "BE": "Belgia",
     "BA": "Bośnia i Hercegowina", "BG": "Bułgaria", "HR": "Chorwacja",
@@ -36,41 +21,22 @@ COUNTRIES = {
     "UA": "Ukraina",
 }
 
-# Parametry jakości powietrza (ID w OpenAQ v3)
 PARAMETERS = {
     1: "pm10",
     2: "pm25",
-    5: "no2",   
-    3: "o3",    
+    5: "no2",
+    3: "o3",
 }
 
-# Zakres dat (4 pełne lata)
 DATE_FROM = "2022-01-01"
 DATE_TO   = "2025-12-31"
-
-# Ze względu na całą Europę, limit ustawiamy na 50 oficjalnych stacji per kraj
-# (to daje ponad 2000 stacji do analizy)
 MAX_STATIONS_PER_COUNTRY = 50
-
-# Folder zapisu
 OUTPUT_DIR = "openaq_data_v2"
 
-# ─────────────────────────────────────────────
-# USTAWIENIA API
-# ─────────────────────────────────────────────
-
 BASE_URL = "https://api.openaq.org/v3"
-HEADERS  = {
-    "X-API-Key": API_KEY,
-    "Accept": "application/json"
-}
-
+HEADERS  = {"X-API-Key": API_KEY, "Accept": "application/json"}
 RATE_LIMIT_DELAY = 0.5
 
-
-# ─────────────────────────────────────────────
-# FUNKCJE POMOCNICZE
-# ─────────────────────────────────────────────
 
 def api_get(endpoint, params=None):
     url = f"{BASE_URL}/{endpoint}"
@@ -83,7 +49,7 @@ def api_get(endpoint, params=None):
         resp.raise_for_status()
         return resp.json()
     except requests.exceptions.RequestException as e:
-        print(f"   Błąd API: {e}")
+        print(f"Błąd API: {e}")
         return None
 
 def get_country_id(country_code):
@@ -125,25 +91,23 @@ def get_stations(country_code, parameter_ids, limit=50):
             if not loc_param_ids.intersection(parameter_ids):
                 continue
 
-            station = {
-                "location_id":   loc["id"],
-                "station_name":  loc.get("name", ""),
-                "city":          loc.get("locality", ""),
-                "country_code":  country_code,
-                "country_name":  COUNTRIES[country_code],
-                "latitude":      coords["latitude"],
-                "longitude":     coords["longitude"],
-                "sensors":       sensors,
-            }
-            stations.append(station)
+            stations.append({
+                "location_id":  loc["id"],
+                "station_name": loc.get("name", ""),
+                "city":         loc.get("locality", ""),
+                "country_code": country_code,
+                "country_name": COUNTRIES[country_code],
+                "latitude":     coords["latitude"],
+                "longitude":    coords["longitude"],
+                "sensors":      sensors,
+            })
 
             if len(stations) >= limit:
                 break
 
         meta = data.get("meta", {})
-        found_raw = meta.get("found", 0)
         try:
-            found = int(str(found_raw).replace(">", "").replace("<", "").strip())
+            found = int(str(meta.get("found", 0)).replace(">", "").replace("<", "").strip())
         except (ValueError, TypeError):
             found = 9999
 
@@ -172,12 +136,11 @@ def get_daily_measurements(sensor_id, date_from, date_to):
         all_results.extend(data["results"])
 
         meta = data.get("meta", {})
-        found_raw = meta.get("found", 0)
-
         try:
-            found = int(str(found_raw).replace(">", "").replace("<", "").replace("+", "").strip())
+            found = int(str(meta.get("found", 0))
+                        .replace(">", "").replace("<", "").replace("+", "").strip())
         except (ValueError, TypeError):
-            found = 9999999  
+            found = 9999999
 
         if page * 1000 >= found:
             break
@@ -187,52 +150,41 @@ def get_daily_measurements(sensor_id, date_from, date_to):
     return all_results
 
 
-# ─────────────────────────────────────────────
-# GŁÓWNA LOGIKA POBIERANIA
-# ─────────────────────────────────────────────
-
 def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    print(f"\n{'='*60}")
-    print("  OpenAQ Data Downloader — CAŁA EUROPA")
-    print(f"{'='*60}\n")
 
-    if API_KEY == "TUTAJ_WKLEJ_SWOJ_KLUCZ_API" or API_KEY == "TWÓJ_KLUCZ_API" or API_KEY == "X":
-        print("  Uzupełnij zmienną API_KEY przed uruchomieniem!")
+    if API_KEY == "X":
+        print("Uzupełnij zmienną API_KEY przed uruchomieniem!")
         return
 
     all_stations     = []
     all_measurements = []
 
-    print(" KROK 1: Pobieranie stacji pomiarowych...")
-    print("-" * 40)
-
     for country_code, country_name in COUNTRIES.items():
-        print(f"   {country_name} ({country_code})...", end="")
+        print(f"{country_name} ({country_code})...", end=" ")
         stations = get_stations(
             country_code,
             parameter_ids=set(PARAMETERS.keys()),
             limit=MAX_STATIONS_PER_COUNTRY
         )
-        print(f" {len(stations)} stacji.")
+        print(f"{len(stations)} stacji")
         all_stations.extend(stations)
         time.sleep(RATE_LIMIT_DELAY)
 
     if not all_stations:
-        print("\n  Nie pobrano żadnych stacji. Sprawdź klucz API.")
+        print("Nie pobrano żadnych stacji.")
         return
 
-    print(f"\n\n KROK 2: Pobieranie pomiarów ({DATE_FROM} → {DATE_TO})")
-    print("-" * 40)
-    print(f"  Łącznie stacji: {len(all_stations)}\n")
+    print(f"\nPobieranie pomiarów ({DATE_FROM} → {DATE_TO})")
+    print(f"Łącznie stacji: {len(all_stations)}\n")
 
     station_rows = []
 
-    for station in tqdm(all_stations, desc="  Pobieranie"):
+    for station in tqdm(all_stations, desc="Pobieranie"):
         station_id   = station["location_id"]
         station_name = station["station_name"]
 
-        station_row = {
+        station_rows.append({
             "location_id":  station_id,
             "station_name": station_name,
             "city":         station["city"],
@@ -240,7 +192,7 @@ def main():
             "country_name": station["country_name"],
             "latitude":     station["latitude"],
             "longitude":    station["longitude"],
-        }
+        })
 
         for sensor in station.get("sensors", []):
             sensor_id  = sensor.get("id")
@@ -277,27 +229,19 @@ def main():
 
             time.sleep(RATE_LIMIT_DELAY)
 
-        station_rows.append(station_row)
-
-    print("\n\n KROK 3: Zapisywanie plików (.parquet)...")
-    print("-" * 40)
-
     df_stations = pd.DataFrame(station_rows)
-    stations_path = os.path.join(OUTPUT_DIR, "stations.parquet")
-    df_stations.to_parquet(stations_path, index=False)
-    print(f"   stations.parquet          ({len(df_stations)} stacji)")
+    df_stations.to_parquet(os.path.join(OUTPUT_DIR, "stations.parquet"), index=False)
+    print(f"stations.parquet          ({len(df_stations)} stacji)")
 
     if not all_measurements:
-        print("   Brak pomiarów — sprawdź daty lub dostępność danych")
+        print("Brak pomiarów.")
         return
 
     df_meas = pd.DataFrame(all_measurements)
     df_meas["date"] = pd.to_datetime(df_meas["date"])
     df_meas = df_meas.sort_values(["country_code", "location_id", "date"])
-
-    meas_path = os.path.join(OUTPUT_DIR, "measurements_daily.parquet")
-    df_meas.to_parquet(meas_path, index=False)
-    print(f"   measurements_daily.parquet ({len(df_meas):,} rekordów)")
+    df_meas.to_parquet(os.path.join(OUTPUT_DIR, "measurements_daily.parquet"), index=False)
+    print(f"measurements_daily.parquet ({len(df_meas):,} rekordów)")
 
     df_pivot = df_meas.groupby(
         ["location_id", "station_name", "city", "country_code", "country_name",
@@ -314,14 +258,12 @@ def main():
 
     param_cols = [c for c in df_profiles.columns if c in PARAMETERS.values()]
     df_profiles = df_profiles.dropna(subset=param_cols, thresh=len(param_cols) // 2 + 1)
+    df_profiles.to_parquet(os.path.join(OUTPUT_DIR, "station_profiles.parquet"), index=False)
+    print(f"station_profiles.parquet  ({len(df_profiles)} stacji z profilami)")
 
-    profiles_path = os.path.join(OUTPUT_DIR, "station_profiles.parquet")
-    df_profiles.to_parquet(profiles_path, index=False)
-    print(f"   station_profiles.parquet  ({len(df_profiles)} stacji z profilami)")
-
-    print(f"\n   Parametry w danych:")
+    print(f"\nParametry w danych:")
     for p, cnt in df_meas["parameter"].value_counts().items():
-        print(f"      {p:<8}: {cnt:>10,}")
+        print(f"  {p:<8}: {cnt:>10,}")
 
 if __name__ == "__main__":
     main()
