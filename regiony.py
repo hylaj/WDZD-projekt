@@ -3,7 +3,6 @@ import pandas as pd
 df_monthly  = pd.read_parquet("openaq_clean_v2/monthly_aggregates.parquet")
 df_pca      = pd.read_parquet("openaq_clean_v2/pca_umap_results.parquet")
 
-# Region per kraj - moda (najczęstszy region wśród stacji w danym kraju)
 region_map = (
     df_pca.groupby("country_code")["region"]
     .agg(lambda x: x.mode()[0])
